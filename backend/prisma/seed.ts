@@ -1,377 +1,320 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, RequestType, RequestStatus, Priority, EquipmentCategory, UserRole, EquipmentStatus } from '@prisma/client';
 import { hashPassword } from '../src/utils/password';
 
 const prisma = new PrismaClient();
 
 async function main() {
-    console.log('🌱 Starting database seed...');
+    console.log('🌱 Starting comprehensive database seed for GearGuard...');
+
+    // CLEANUP
+    console.log('🧹 Cleaning up old data...');
+    await prisma.maintenanceRequest.deleteMany();
+    await prisma.equipment.deleteMany();
+    await prisma.user.deleteMany();
+    await prisma.maintenanceTeam.deleteMany();
+    await prisma.department.deleteMany();
 
     // ============================================
     // 1. CREATE DEPARTMENTS
     // ============================================
     console.log('📦 Creating departments...');
 
-    const production = await prisma.department.upsert({
-        where: { name: 'Production' },
-        update: {},
-        create: {
-            name: 'Production',
-            description: 'Manufacturing and production department',
-        },
+    const deptProduction = await prisma.department.create({
+        data: { name: 'Production', description: 'Main assembly and manufacturing line' }
     });
-
-    const it = await prisma.department.upsert({
-        where: { name: 'IT' },
-        update: {},
-        create: {
-            name: 'IT',
-            description: 'Information Technology department',
-        },
+    const deptIT = await prisma.department.create({
+        data: { name: 'IT Infrastructure', description: 'Server rooms and specialized IT zones' }
     });
-
-    const facilities = await prisma.department.upsert({
-        where: { name: 'Facilities' },
-        update: {},
-        create: {
-            name: 'Facilities',
-            description: 'Facilities management department',
-        },
+    const deptFacilities = await prisma.department.create({
+        data: { name: 'Facilities Management', description: 'General building maintenance' }
     });
-
-    console.log('✅ Departments created');
+    const deptLogistics = await prisma.department.create({
+        data: { name: 'Logistics & Warehousing', description: 'Shipping, receiving, and storage' }
+    });
 
     // ============================================
     // 2. CREATE MAINTENANCE TEAMS
     // ============================================
     console.log('👥 Creating maintenance teams...');
 
-    const mechanicalTeam = await prisma.maintenanceTeam.upsert({
-        where: { name: 'Mechanical Team' },
-        update: {},
-        create: {
-            name: 'Mechanical Team',
-            specialty: 'Mechanical',
-            description: 'Handles all mechanical equipment and machinery',
-        },
+    const teamMechanical = await prisma.maintenanceTeam.create({
+        data: { name: 'Mechanical Unit Alpha', specialty: 'Mechanical', description: 'Heavy machinery specialists' }
     });
-
-    const itTeam = await prisma.maintenanceTeam.upsert({
-        where: { name: 'IT Support Team' },
-        update: {},
-        create: {
-            name: 'IT Support Team',
-            specialty: 'IT',
-            description: 'Handles computers, networks, and IT infrastructure',
-        },
+    const teamElectrical = await prisma.maintenanceTeam.create({
+        data: { name: 'High Volts Squad', specialty: 'Electrical', description: 'High voltage and circuitry' }
     });
-
-    const electricalTeam = await prisma.maintenanceTeam.upsert({
-        where: { name: 'Electrical Team' },
-        update: {},
-        create: {
-            name: 'Electrical Team',
-            specialty: 'Electrical',
-            description: 'Handles electrical systems and equipment',
-        },
+    const teamIT = await prisma.maintenanceTeam.create({
+        data: { name: 'Tech Ops', specialty: 'IT', description: 'Hardware and network infrastructure' }
     });
-
-    const hvacTeam = await prisma.maintenanceTeam.upsert({
-        where: { name: 'HVAC Team' },
-        update: {},
-        create: {
-            name: 'HVAC Team',
-            specialty: 'HVAC',
-            description: 'Handles heating, ventilation, and air conditioning',
-        },
+    const teamHVAC = await prisma.maintenanceTeam.create({
+        data: { name: 'Climate Control', specialty: 'HVAC', description: 'Heating and cooling systems' }
     });
-
-    console.log('✅ Teams created');
 
     // ============================================
-    // 3. CREATE USERS
+    // 3. CREATE USERS (Admin, Manager, Techs, Employees)
     // ============================================
-    console.log('👤 Creating users...');
+    console.log('👤 Creating users with hierarchy...');
+    const password = await hashPassword('password123');
 
-    const hashedPassword = await hashPassword('password123');
-
-    // Admin
-    const admin = await prisma.user.upsert({
-        where: { email: 'admin@gearguard.com' },
-        update: {},
-        create: {
+    // ADMIN
+    await prisma.user.create({
+        data: {
             email: 'admin@gearguard.com',
-            password: hashedPassword,
-            firstName: 'Admin',
-            lastName: 'User',
+            password,
+            firstName: 'Super',
+            lastName: 'Admin',
             role: 'ADMIN',
-        },
+            isVerified: true,
+        }
     });
 
-    // Managers
-    const manager1 = await prisma.user.upsert({
-        where: { email: 'manager@gearguard.com' },
-        update: {},
-        create: {
+    // MANAGER (The one who "makes technician teams")
+    const manager = await prisma.user.create({
+        data: {
             email: 'manager@gearguard.com',
-            password: hashedPassword,
-            firstName: 'John',
+            password,
+            firstName: 'Marcus',
             lastName: 'Manager',
             role: 'MANAGER',
-        },
+            isVerified: true,
+        }
     });
 
-    // Technicians
-    const techMech1 = await prisma.user.upsert({
-        where: { email: 'mike.tech@gearguard.com' },
-        update: {},
-        create: {
+    // TECHNICIANS
+    const techMike = await prisma.user.create({
+        data: {
             email: 'mike.tech@gearguard.com',
-            password: hashedPassword,
+            password,
             firstName: 'Mike',
-            lastName: 'Technician',
+            lastName: 'Mechanic',
             role: 'TECHNICIAN',
-            teamId: mechanicalTeam.id,
-        },
+            teamId: teamMechanical.id,
+            isVerified: true,
+        }
     });
 
-    const techIT1 = await prisma.user.upsert({
-        where: { email: 'sarah.it@gearguard.com' },
-        update: {},
-        create: {
+    const techSarah = await prisma.user.create({
+        data: {
             email: 'sarah.it@gearguard.com',
-            password: hashedPassword,
+            password,
             firstName: 'Sarah',
-            lastName: 'Johnson',
+            lastName: 'Silicon',
             role: 'TECHNICIAN',
-            teamId: itTeam.id,
-        },
+            teamId: teamIT.id,
+            isVerified: true,
+        }
     });
 
-    const techElec1 = await prisma.user.upsert({
-        where: { email: 'david.elec@gearguard.com' },
-        update: {},
-        create: {
+    const techDavid = await prisma.user.create({
+        data: {
             email: 'david.elec@gearguard.com',
-            password: hashedPassword,
+            password,
             firstName: 'David',
-            lastName: 'Smith',
+            lastName: 'Spark',
             role: 'TECHNICIAN',
-            teamId: electricalTeam.id,
-        },
+            teamId: teamElectrical.id,
+            isVerified: true,
+        }
     });
 
-    const techHVAC1 = await prisma.user.upsert({
-        where: { email: 'lisa.hvac@gearguard.com' },
-        update: {},
-        create: {
-            email: 'lisa.hvac@gearguard.com',
-            password: hashedPassword,
-            firstName: 'Lisa',
-            lastName: 'Brown',
+    const techTom = await prisma.user.create({
+        data: {
+            email: 'tom.hvac@gearguard.com',
+            password,
+            firstName: 'Tom',
+            lastName: 'Cooler',
             role: 'TECHNICIAN',
-            teamId: hvacTeam.id,
-        },
+            teamId: teamHVAC.id,
+            isVerified: true,
+        }
     });
 
-    // Regular user
-    const user1 = await prisma.user.upsert({
-        where: { email: 'user@gearguard.com' },
-        update: {},
-        create: {
+    // EMPLOYEES (Who report issues)
+    const employeeJane = await prisma.user.create({
+        data: {
             email: 'user@gearguard.com',
-            password: hashedPassword,
+            password,
             firstName: 'Jane',
-            lastName: 'Doe',
+            lastName: 'Operator',
             role: 'USER',
-        },
+            isVerified: true,
+        }
     });
 
-    console.log('✅ Users created');
+    const employeeBob = await prisma.user.create({
+        data: {
+            email: 'bob@gearguard.com',
+            password,
+            firstName: 'Bob',
+            lastName: 'Builder',
+            role: 'USER',
+            isVerified: true,
+        }
+    });
 
     // ============================================
     // 4. CREATE EQUIPMENT
     // ============================================
-    console.log('🔧 Creating equipment...');
+    console.log('🔧 Creating equipment inventory...');
 
-    const cnc = await prisma.equipment.create({
+    const cncMachine = await prisma.equipment.create({
         data: {
-            name: 'CNC Machine #1',
-            serialNumber: 'CNC-2024-001',
+            name: 'CNC Milling Center X500',
+            serialNumber: 'CNC-X500-001',
             category: 'MACHINERY',
             purchaseDate: new Date('2023-01-15'),
-            warrantyExpiry: new Date('2026-01-15'),
-            location: 'Production Floor A',
-            departmentId: production.id,
-            maintenanceTeamId: mechanicalTeam.id,
+            location: 'Production Floor Zone A',
+            departmentId: deptProduction.id,
+            maintenanceTeamId: teamMechanical.id,
             status: 'ACTIVE',
-        },
+        }
     });
 
-    const laptop = await prisma.equipment.create({
+    const serverRack = await prisma.equipment.create({
         data: {
-            name: 'Dell Laptop #42',
-            serialNumber: 'DELL-LAP-042',
+            name: 'Main Database Server Rack',
+            serialNumber: 'SRV-DB-01',
             category: 'COMPUTER',
-            purchaseDate: new Date('2024-03-10'),
-            warrantyExpiry: new Date('2027-03-10'),
-            location: 'IT Department',
-            ownerId: user1.id,
-            maintenanceTeamId: itTeam.id,
+            purchaseDate: new Date('2024-02-20'),
+            location: 'Server Room 1',
+            departmentId: deptIT.id,
+            maintenanceTeamId: teamIT.id,
             status: 'ACTIVE',
-        },
+        }
     });
 
     const forklift = await prisma.equipment.create({
         data: {
-            name: 'Forklift #5',
-            serialNumber: 'FORK-2023-005',
+            name: 'Heavy Duty Forklift',
+            serialNumber: 'FL-2023-99',
             category: 'VEHICLE',
-            purchaseDate: new Date('2023-06-20'),
-            location: 'Warehouse',
-            departmentId: production.id,
-            maintenanceTeamId: mechanicalTeam.id,
-            status: 'ACTIVE',
-        },
+            purchaseDate: new Date('2022-11-05'),
+            location: 'Main Warehouse',
+            departmentId: deptLogistics.id,
+            maintenanceTeamId: teamMechanical.id,
+            status: 'INACTIVE', // Currently broken
+        }
     });
 
-    const hvacUnit = await prisma.equipment.create({
+    const acUnit = await prisma.equipment.create({
         data: {
-            name: 'HVAC Unit - Building A',
-            serialNumber: 'HVAC-A-001',
+            name: 'Rooftop HVAC Unit 3',
+            serialNumber: 'HVAC-RT-03',
             category: 'HVAC',
-            purchaseDate: new Date('2022-08-01'),
-            warrantyExpiry: new Date('2027-08-01'),
-            location: 'Building A Rooftop',
-            departmentId: facilities.id,
-            maintenanceTeamId: hvacTeam.id,
+            purchaseDate: new Date('2021-06-15'),
+            location: 'Building A Roof',
+            departmentId: deptFacilities.id,
+            maintenanceTeamId: teamHVAC.id,
             status: 'ACTIVE',
-        },
+        }
     });
 
     const generator = await prisma.equipment.create({
         data: {
-            name: 'Backup Generator',
-            serialNumber: 'GEN-2024-001',
+            name: 'Backup Diesel Generator',
+            serialNumber: 'GEN-500KVA',
             category: 'ELECTRICAL',
-            purchaseDate: new Date('2024-01-10'),
-            warrantyExpiry: new Date('2029-01-10'),
-            location: 'Power Room',
-            departmentId: facilities.id,
-            maintenanceTeamId: electricalTeam.id,
+            purchaseDate: new Date('2020-03-12'),
+            location: 'Power Plant Annex',
+            departmentId: deptFacilities.id,
+            maintenanceTeamId: teamElectrical.id,
             status: 'ACTIVE',
-        },
+        }
     });
 
-    console.log('✅ Equipment created');
-
     // ============================================
-    // 5. CREATE MAINTENANCE REQUESTS
+    // 5. CREATE MAINTENANCE REQUESTS (The "Manager handles" part)
     // ============================================
-    console.log('📋 Creating maintenance requests...');
+    console.log('📋 Creating realistic maintenance requests...');
 
-    // Corrective request - NEW
+    // 1. New Request: Assigned by Manager to Mechanical Team (Unassigned Tech)
     await prisma.maintenanceRequest.create({
         data: {
-            subject: 'CNC Machine making unusual noise',
-            description: 'The CNC machine is making a grinding noise during operation',
+            subject: 'Strange vibration in CNC Spindle',
+            description: 'Operator reported excessive vibration at high RPMs. Needs inspection ASAP.',
             requestType: 'CORRECTIVE',
-            equipmentId: cnc.id,
-            category: cnc.category,
-            teamId: mechanicalTeam.id,
-            createdById: user1.id,
+            priority: 'HIGH',
             status: 'NEW',
+            equipmentId: cncMachine.id,
+            category: 'MACHINERY',
+            teamId: teamMechanical.id, // Assigned to team
+            createdById: manager.id, // Manager created this
             scheduledDate: new Date(),
-        },
+        }
     });
 
-    // Corrective request - IN_PROGRESS
+    // 2. In Progress Request: Tech Mike working on the Forklift
     await prisma.maintenanceRequest.create({
         data: {
-            subject: 'Laptop screen flickering',
-            description: 'Screen flickers intermittently, especially when moving the lid',
+            subject: 'Hydraulic leak repair',
+            description: 'Fluid leaking from main lift cylinder.',
             requestType: 'CORRECTIVE',
-            equipmentId: laptop.id,
-            category: laptop.category,
-            teamId: itTeam.id,
-            assignedToId: techIT1.id,
-            createdById: user1.id,
+            priority: 'URGENT',
             status: 'IN_PROGRESS',
-            startedAt: new Date(),
-            scheduledDate: new Date(),
-        },
-    });
-
-    // Preventive request - scheduled for future
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + 7);
-
-    await prisma.maintenanceRequest.create({
-        data: {
-            subject: 'Quarterly HVAC filter replacement',
-            description: 'Routine quarterly maintenance - replace air filters',
-            requestType: 'PREVENTIVE',
-            equipmentId: hvacUnit.id,
-            category: hvacUnit.category,
-            teamId: hvacTeam.id,
-            createdById: manager1.id,
-            status: 'NEW',
-            scheduledDate: futureDate,
-        },
-    });
-
-    // Overdue preventive request
-    const pastDate = new Date();
-    pastDate.setDate(pastDate.getDate() - 3);
-
-    await prisma.maintenanceRequest.create({
-        data: {
-            subject: 'Forklift monthly inspection',
-            description: 'Monthly safety inspection and oil check',
-            requestType: 'PREVENTIVE',
             equipmentId: forklift.id,
-            category: forklift.category,
-            teamId: mechanicalTeam.id,
-            createdById: manager1.id,
-            status: 'NEW',
-            scheduledDate: pastDate,
-        },
+            category: 'VEHICLE',
+            teamId: teamMechanical.id,
+            assignedToId: techMike.id, // Specific tech assigned
+            createdById: employeeJane.id, // Employee reported it
+            startedAt: new Date(Date.now() - 3600000), // Started 1 hour ago
+        }
     });
 
-    // Completed request
+    // 3. Completed Request: Sarah fixed a server issue
     await prisma.maintenanceRequest.create({
         data: {
-            subject: 'Generator routine maintenance',
-            description: 'Monthly generator test and fuel check',
-            requestType: 'PREVENTIVE',
-            equipmentId: generator.id,
-            category: generator.category,
-            teamId: electricalTeam.id,
-            assignedToId: techElec1.id,
-            createdById: manager1.id,
+            subject: 'RAID Controller Alert',
+            description: 'Disk 2 showing degradation warnings.',
+            requestType: 'CORRECTIVE',
+            priority: 'HIGH',
             status: 'REPAIRED',
-            scheduledDate: new Date('2024-12-20'),
-            startedAt: new Date('2024-12-20T09:00:00'),
-            completedAt: new Date('2024-12-20T11:30:00'),
+            equipmentId: serverRack.id,
+            category: 'COMPUTER',
+            teamId: teamIT.id,
+            assignedToId: techSarah.id,
+            createdById: manager.id,
+            startedAt: new Date('2024-12-25T09:00:00'),
+            completedAt: new Date('2024-12-25T11:30:00'),
             durationHours: 2.5,
-        },
+            completionNotes: 'Replaced failed drive and rebuilt array. All green.',
+        }
     });
 
-    console.log('✅ Maintenance requests created');
+    // 4. Preventive Maintenance: Scheduled for future, assigned to HVAC team
+    const nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 7);
+    await prisma.maintenanceRequest.create({
+        data: {
+            subject: 'Annual Filter Replacement',
+            description: 'Standard preventive maintenance protocol #HVAC-01.',
+            requestType: 'PREVENTIVE',
+            priority: 'MEDIUM',
+            status: 'NEW',
+            equipmentId: acUnit.id,
+            category: 'HVAC',
+            teamId: teamHVAC.id,
+            createdById: manager.id,
+            scheduledDate: nextWeek,
+        }
+    });
 
-    console.log('');
-    console.log('═══════════════════════════════════════════');
-    console.log('🎉 Database seeded successfully!');
-    console.log('═══════════════════════════════════════════');
-    console.log('');
-    console.log('📧 Test Accounts (password: password123):');
-    console.log('   Admin:      admin@gearguard.com');
-    console.log('   Manager:    manager@gearguard.com');
-    console.log('   Mechanical: mike.tech@gearguard.com');
-    console.log('   IT:         sarah.it@gearguard.com');
-    console.log('   Electrical: david.elec@gearguard.com');
-    console.log('   HVAC:       lisa.hvac@gearguard.com');
-    console.log('   User:       user@gearguard.com');
-    console.log('');
+    // 5. Electrical Issue: Reported by user, awaiting manager review
+    await prisma.maintenanceRequest.create({
+        data: {
+            subject: 'Lights flickering in Warehouse',
+            description: 'The overhead LEDs are strobing intermittently.',
+            requestType: 'CORRECTIVE',
+            priority: 'LOW',
+            status: 'NEW',
+            equipmentId: generator.id, // Associated with power system generally
+            category: 'ELECTRICAL',
+            teamId: teamElectrical.id,
+            createdById: employeeBob.id,
+        }
+    });
+
+    console.log('✅ Seeding complete!');
+    console.log('   All roles, teams, and workflows populated.');
 }
 
 main()
