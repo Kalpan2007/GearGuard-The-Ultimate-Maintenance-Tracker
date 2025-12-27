@@ -11,6 +11,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Prisma](https://img.shields.io/badge/Prisma-5.22-2D3748?style=for-the-badge&logo=prisma&logoColor=white)](https://www.prisma.io/)
+[![PM2](https://img.shields.io/badge/PM2-Latest-2B037A?style=for-the-badge&logo=pm2&logoColor=white)](https://pm2.keymetrics.io/)
 
 ---
 
@@ -78,6 +79,7 @@
 - 📚 **Postman Collection** - Ready-to-use API testing suite included
 - 🔧 **Easy Configuration** - Environment-based settings for seamless deployment
 - 🐳 **Docker Ready** - Containerized deployment for production environments
+- ⚙️ **PM2 Process Management** - Zero-downtime deployments with automatic restarts and monitoring
 
 ---
 
@@ -365,6 +367,7 @@ npm run dev            # Starts on http://localhost:5173
 
 [![ESLint](https://img.shields.io/badge/ESLint-9.39-4B32C3?style=for-the-badge&logo=eslint&logoColor=white)](https://eslint.org/)
 [![Nodemon](https://img.shields.io/badge/Nodemon-3.1-76D04B?style=for-the-badge&logo=nodemon&logoColor=white)](https://nodemon.io/)
+[![PM2](https://img.shields.io/badge/PM2-Latest-2B037A?style=for-the-badge&logo=pm2&logoColor=white)](https://pm2.keymetrics.io/)
 [![PostCSS](https://img.shields.io/badge/PostCSS-8.5-DD3A0A?style=for-the-badge&logo=postcss&logoColor=white)](https://postcss.org/)
 [![ts-node](https://img.shields.io/badge/ts--node-10.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://typestrong.org/ts-node/)
 
@@ -443,6 +446,19 @@ npm run dev            # Starts on http://localhost:5173
 | 🔄 `npm run migrate:reset` | Reset database and re-run migrations |
 | 🔧 `npm run prisma:generate` | Generate Prisma Client |
 
+### Production Deployment (PM2)
+
+| Command | Description |
+|:--------|:------------|
+| 🚀 `pm2 start dist/server.js --name gearguard-api` | Start API with PM2 process manager |
+| 🔄 `pm2 restart gearguard-api` | Restart the application |
+| 🛑 `pm2 stop gearguard-api` | Stop the application |
+| 📊 `pm2 status` | Check application status |
+| 📝 `pm2 logs gearguard-api` | View application logs |
+| 📈 `pm2 monit` | Monitor CPU and memory usage |
+| ⚙️ `pm2 startup` | Configure PM2 to start on system boot |
+| 💾 `pm2 save` | Save current PM2 process list |
+
 ### Frontend Commands
 
 | Command | Description |
@@ -486,6 +502,38 @@ SMTP_PASS="your-app-password"
 # Optional: File Upload
 MAX_FILE_SIZE="10mb"
 UPLOAD_DIR="./uploads"
+
+# PM2 Configuration (for production)
+PM2_INSTANCES=2
+PM2_MAX_MEMORY="512M"
+```
+
+### PM2 Ecosystem Configuration
+
+Create an `ecosystem.config.js` file in the `backend` directory for PM2:
+
+```javascript
+module.exports = {
+  apps: [{
+    name: 'gearguard-api',
+    script: './dist/server.js',
+    instances: 2,
+    exec_mode: 'cluster',
+    max_memory_restart: '512M',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 3000
+    },
+    error_file: './logs/err.log',
+    out_file: './logs/out.log',
+    log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
+    merge_logs: true,
+    autorestart: true,
+    watch: false,
+    max_restarts: 10,
+    min_uptime: '10s'
+  }]
+};
 ```
 
 ### Frontend Environment Variables
