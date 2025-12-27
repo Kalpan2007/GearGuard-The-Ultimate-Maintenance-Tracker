@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
 import { getRequests } from '../../api/requests';
 import type { MaintenanceRequest } from '../../types';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO } from 'date-fns';
+import { startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, format } from 'date-fns';
 import { Link } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import CreateRequestModal from '../../components/requests/CreateRequestModal';
 
 export default function CalendarView() {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [requests, setRequests] = useState<MaintenanceRequest[]>([]);
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedDate, setSelectedDate] = useState<string>('');
 
     useEffect(() => {
         // In a real app we'd filter by date range, but fetching all for demo is fine
@@ -21,6 +25,16 @@ export default function CalendarView() {
             // Filter for preventive or scheduled
             setRequests(data.filter(r => r.scheduledDate));
         } catch (error) { console.error(error); }
+    };
+
+    const handleDateClick = (date: Date) => {
+        // Format for input type="date"
+        setSelectedDate(format(date, 'yyyy-MM-dd'));
+        setIsModalOpen(true);
+    };
+
+    const handleCreateSuccess = () => {
+        loadRequests();
     };
 
     const daysInMonth = eachDayOfInterval({
@@ -78,7 +92,10 @@ export default function CalendarView() {
                                 </div>
 
                                 {/* Add button on hover */}
-                                <button className="hidden group-hover:flex absolute bottom-2 right-2 h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold leading-none hover:scale-110 transition-transform">
+                                <button
+                                    onClick={() => handleDateClick(day)}
+                                    className="hidden group-hover:flex absolute bottom-2 right-2 h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground text-xs font-bold leading-none hover:scale-110 transition-transform"
+                                >
                                     +
                                 </button>
                             </div>
@@ -86,6 +103,13 @@ export default function CalendarView() {
                     })}
                 </div>
             </div>
+
+            <CreateRequestModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                onSuccess={handleCreateSuccess}
+                preselectedDate={selectedDate}
+            />
         </div>
     );
 }
